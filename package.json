@@ -2,7 +2,7 @@
   "name": "backend-server",
   "version": "1.0.0",
   "main": "index.js",
-    "scripts": {
+  "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
@@ -19,6 +19,7 @@
     "nodemailer": "^7.0.10",
     "nodemon": "^3.1.11",
     "react-router-dom": "^7.9.5",
+    "resend": "^6.6.0",
     "twilio": "^5.10.5"
   }
 }
