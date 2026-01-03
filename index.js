@@ -25,27 +25,45 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
   .catch(err => console.log("Mongo Error:", err));
 
-app.post("/create", async (req, res) => {
-  try {
-    const { userName, email, passWord } = req.body;
+// app.post("/create", async (req, res) => {
+//   try {
+//     const { userName, email, passWord } = req.body;
 
-    if (!userName || !email || !passWord) {
-      return res.status(400).json({ message: "All fields required" });
-    }
+//     if (!userName || !email || !passWord) {
+//       return res.status(400).json({ message: "All fields required" });
+//     }
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(409).json({ message: "User already exists" });
-    }
+//     const existingUser = await User.findOne({ email });
+//     if (existingUser) {
+//       return res.status(409).json({ message: "User already exists" });
+//     }
 
-    const newUser = new User({ userName, email, passWord });
-    await newUser.save();
+//     const newUser = new User({ userName, email, passWord });
+//     await newUser.save();
 
-    res.status(201).json({ success: true });
+//     res.status(201).json({ success: true });
 
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
+//   } catch (err) {
+//     res.status(500).json({ message: "Server error" });
+//   }
+// });
+app.post("/login", async (req, res) => {
+  const { userName, email, passWord } = req.body;
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res.status(401).json({ message: "Invalid credentials" });
   }
+
+  if (user.passWord !== passWord) {
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  res.json({
+    success: true,
+    userName: user.userName
+  });
 });
 
 app.get("/admin/users", async (req, res) => {
