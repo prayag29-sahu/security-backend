@@ -12,7 +12,19 @@ mongoose.connect(process.env.MONGO_URI)
 
 let app = express()
 app.use(express.json())
-app.use(cors())
+// app.use(cors())
+app.use(cors({
+  origin: [
+    "https://governmentaccountssecurity.vercel.app",
+    "http://localhost:5173"
+  ],
+  methods: ["GET", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+  credentials: false
+}));
+
+app.options("*", cors()); // 👈 VERY IMPORTANT
+
 
 
 
