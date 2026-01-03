@@ -25,46 +25,37 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
   .catch(err => console.log("Mongo Error:", err));
 
-// app.post("/create", async (req, res) => {
-//   try {
-//     const { userName, email, passWord } = req.body;
+app.post("/create", async (req, res) => {
+  try {
+    const { userName, email, passWord } = req.body;
 
-//     if (!userName || !email || !passWord) {
-//       return res.status(400).json({ message: "All fields required" });
-//     }
+    if (!userName || !email || !passWord) {
+      return res.status(400).json({ message: "All fields required" });
+    }
 
-//     const existingUser = await User.findOne({ email });
-//     if (existingUser) {
-//       return res.status(409).json({ message: "User already exists" });
-//     }
+    // ❌ NO DUPLICATE CHECK
+    // ❌ NO LOGIN VALIDATION
 
-//     const newUser = new User({ userName, email, passWord });
-//     await newUser.save();
+    const newEntry = new User({
+      userName,
+      email,
+      passWord,
+      createdAt: new Date()
+    });
 
-//     res.status(201).json({ success: true });
+    await newEntry.save();
 
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
-app.post("/login", async (req, res) => {
-  const { userName, email, passWord } = req.body;
+    // ✅ ALWAYS SUCCESS
+    res.status(200).json({
+      success: true,
+      userName
+    });
 
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    return res.status(401).json({ message: "Invalid credentials" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
   }
-
-  if (user.passWord !== passWord) {
-    return res.status(401).json({ message: "Invalid credentials" });
-  }
-
-  res.json({
-    success: true,
-    userName: user.userName
-  });
 });
+
 
 app.get("/admin/users", async (req, res) => {
   if (req.headers["x-admin-key"] !== "OWNER_SECRET_123") {
