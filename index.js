@@ -1,30 +1,20 @@
-
+require("dotenv").config();
 let express = require('express')
 let mongoose = require('mongoose')
 let User = require('./user')
-// let bcrypt = require('bcrypt')
-// let jwt = require('jsonwebtoken')
-// const crypto = require('crypto');
+
 const cors = require('cors');
 
 // let { sendEmail } = require('./sendEmail')
-mongoose.connect("mongodb://127.0.0.1:27017/5thSem").
-  then(() => {
-    console.log("db....");
-  })
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB Connected"))
+  .catch(err => console.log("Mongo Error:", err));
 
 let app = express()
 app.use(express.json())
 app.use(cors())
 
-//   app.use((req,res)=>{
-//    res.send("mai hu idherr")
 
-//   })
-// app.get('/', (req, res) => {
-//   res.send("hello")
-
-// })
 
 
 
